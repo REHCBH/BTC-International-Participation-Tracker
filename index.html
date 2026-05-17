@@ -1,0 +1,2444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BTC International Participation Tracker</title>
+<meta name="description" content="A live ledger of international horse participation at the Bahrain Turf Club — every season, every winner.">
+<meta name="theme-color" content="#980B2C">
+<link rel="icon" type="image/png" href="./assets/favicon.png">
+<link rel="apple-touch-icon" href="./assets/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,400..600&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  /* =========================================================================
+     DESIGN TOKENS — single source of truth for the visual system
+     ========================================================================= */
+  :root{
+    /* Surfaces */
+    --bg:           #FAFAF7;
+    --bg-elevated:  #FFFFFF;
+    --bg-subtle:    #F4F1EA;
+    --bg-hover:     #EFEAE0;
+    --bg-dark:      #1A1410;
+
+    /* Borders */
+    --border:           #ECE6D8;
+    --border-strong:    #D7CFBC;
+    --border-subtle:    #F4EFE2;
+
+    /* Text */
+    --text:             #1A1410;
+    --text-secondary:   #5C544D;
+    --text-tertiary:    #8A8174;
+    --text-disabled:    #B5AC9D;
+    --text-inverse:     #FFFFFF;
+
+    /* Brand */
+    --brand:        #980B2C;
+    --brand-hover:  #B11538;
+    --brand-soft:   rgba(152,11,44,0.08);
+    --brand-bg:     rgba(152,11,44,0.04);
+    --brand-ring:   rgba(152,11,44,0.18);
+
+    /* Accents */
+    --gold:         #C9A961;
+    --gold-soft:    #E8D9B4;
+    --gold-bg:      rgba(201,169,97,0.10);
+
+    /* Country pill colors (consistent across charts + tables) */
+    --c-gb:    #1B3F8F;
+    --c-ire:   #169B62;
+    --c-fr:    #2E5E9E;
+    --c-uae:   #2D2D2D;
+    --c-ger:   #524A42;
+    --c-jpn:   #BC002D;
+    --c-nor:   #BA0C2F;
+    --c-qat:   #8D1B3D;
+
+    /* Elevation */
+    --shadow-xs: 0 1px 1px rgba(26,20,16,0.04);
+    --shadow-sm: 0 1px 3px rgba(26,20,16,0.06), 0 1px 2px rgba(26,20,16,0.04);
+    --shadow-md: 0 4px 12px rgba(26,20,16,0.06), 0 2px 4px rgba(26,20,16,0.04);
+    --shadow-lg: 0 12px 32px rgba(26,20,16,0.10), 0 4px 12px rgba(26,20,16,0.06);
+    --shadow-xl: 0 24px 48px rgba(26,20,16,0.14);
+
+    /* Radii */
+    --r-sm:  4px;
+    --r-md:  8px;
+    --r-lg:  12px;
+    --r-pill: 999px;
+
+    /* Motion */
+    --ease: cubic-bezier(0.22, 0.8, 0.32, 1);
+    --ease-bounce: cubic-bezier(0.18, 0.89, 0.32, 1.18);
+  }
+
+  /* =========================================================================
+     RESET & BASE
+     ========================================================================= */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Manrope', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-weight: 400;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+  }
+  button, input { font-family: inherit; }
+  img { display: block; max-width: 100%; }
+  ::selection { background: var(--brand-soft); color: var(--brand); }
+
+  /* =========================================================================
+     LAYOUT
+     ========================================================================= */
+  .page { max-width: 1320px; margin: 0 auto; padding: 0 32px 96px; position: relative; }
+
+  /* =========================================================================
+     TOPBAR — slim, sticky, SaaS-style
+     ========================================================================= */
+  .topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(250,250,247,0.85);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid var(--border-subtle);
+    margin: 0 -32px 24px;
+    padding: 0 32px;
+  }
+  .topbar-inner {
+    max-width: 1320px; margin: 0 auto;
+    height: 64px;
+    display: flex; align-items: center; gap: 24px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 12px;
+    flex-shrink: 0; text-decoration: none; color: var(--text);
+  }
+  .brand-logo {
+    width: 36px; height: 36px; object-fit: contain;
+    transition: transform 0.5s var(--ease-bounce);
+  }
+  .brand:hover .brand-logo { transform: rotate(-4deg) scale(1.06); }
+  .brand-name { display: flex; flex-direction: column; gap: 1px; line-height: 1.1; }
+  .brand-name .top {
+    font-family: 'Fraunces', serif; font-weight: 500; font-style: italic;
+    font-size: 15px; letter-spacing: -0.01em; color: var(--text);
+  }
+  .brand-name .sub {
+    font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+    font-weight: 600; color: var(--text-tertiary);
+  }
+  .topbar-spacer { flex: 1; }
+
+  /* Global search */
+  .search-wrap { position: relative; width: 320px; flex-shrink: 1; }
+  .search-wrap input {
+    width: 100%; height: 38px;
+    padding: 0 12px 0 38px;
+    font-size: 13px; color: var(--text);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border); border-radius: var(--r-md);
+    outline: none; transition: all 0.15s var(--ease);
+  }
+  .search-wrap input::placeholder { color: var(--text-tertiary); }
+  .search-wrap input:hover { border-color: var(--border-strong); }
+  .search-wrap input:focus {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px var(--brand-ring);
+  }
+  .search-wrap::before {
+    content: ''; position: absolute; left: 14px; top: 50%;
+    width: 14px; height: 14px; transform: translateY(-50%);
+    background: no-repeat center / contain;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='%238A8174' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+  .search-kbd {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    padding: 2px 6px; font-size: 10px; font-weight: 600;
+    color: var(--text-tertiary); background: var(--bg-subtle);
+    border: 1px solid var(--border); border-radius: var(--r-sm);
+    letter-spacing: 0.04em; pointer-events: none;
+  }
+  .search-results {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border); border-radius: var(--r-md);
+    box-shadow: var(--shadow-lg);
+    max-height: 440px; overflow-y: auto;
+    z-index: 200; display: none; overscroll-behavior: contain;
+  }
+  .search-results.open { display: block; animation: fadeInDown 0.18s var(--ease); }
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .search-empty { padding: 24px; text-align: center; color: var(--text-tertiary); font-size: 13px; }
+  .search-group {
+    padding: 10px 14px 6px;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--text-tertiary); background: var(--bg-subtle);
+    position: sticky; top: 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .search-result {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-subtle);
+    cursor: pointer; transition: background 0.12s ease;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .search-result:last-child { border-bottom: none; }
+  .search-result:hover, .search-result.active { background: var(--brand-bg); }
+  .sr-name { font-weight: 600; color: var(--text); font-size: 13px; }
+  .sr-name .origin { font-size: 11px; color: var(--text-tertiary); font-style: italic; font-weight: 400; margin-left: 4px; }
+  .sr-meta { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+  .sr-stat {
+    font-size: 12px; font-weight: 700; color: var(--brand);
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+
+  /* Live indicator */
+  .live-pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 6px 12px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border); border-radius: var(--r-pill);
+    font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+    color: var(--text-secondary); flex-shrink: 0;
+  }
+  .live-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--brand);
+    box-shadow: 0 0 0 0 var(--brand);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(152,11,44,0.6); opacity: 1; }
+    50%      { box-shadow: 0 0 0 6px rgba(152,11,44,0); opacity: 0.7; }
+  }
+
+  /* =========================================================================
+     HERO — minimal, much smaller than before
+     ========================================================================= */
+  .hero {
+    padding: 32px 0 28px;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 32px; flex-wrap: wrap;
+  }
+  .hero-text { max-width: 720px; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--brand); margin-bottom: 10px;
+  }
+  .eyebrow::before { content: ''; width: 18px; height: 1px; background: var(--brand); }
+  .hero h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 300;
+    font-size: clamp(34px, 5vw, 52px);
+    line-height: 1.02; letter-spacing: -0.025em;
+    color: var(--text);
+  }
+  .hero h1 em { font-style: italic; font-weight: 400; color: var(--brand); }
+  .hero-meta { font-size: 13px; color: var(--text-tertiary); margin-top: 8px; }
+  .hero-meta strong { color: var(--text-secondary); font-weight: 600; }
+
+  /* =========================================================================
+     SEASON TABS — segmented control
+     ========================================================================= */
+  .season-tabs-wrap {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 28px;
+    overflow-x: auto; scrollbar-width: thin;
+  }
+  .season-tabs-wrap::-webkit-scrollbar { height: 4px; }
+  .season-tabs-wrap::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+  .season-tabs {
+    display: inline-flex;
+    background: var(--bg-subtle);
+    padding: 4px;
+    border-radius: var(--r-md);
+    border: 1px solid var(--border-subtle);
+    gap: 2px; flex-shrink: 0;
+  }
+  .tab {
+    padding: 8px 14px;
+    font-size: 13px; font-weight: 600;
+    color: var(--text-secondary); background: transparent;
+    border: none; border-radius: var(--r-sm);
+    cursor: pointer; white-space: nowrap;
+    transition: all 0.15s var(--ease);
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .tab:hover { color: var(--text); background: var(--bg-hover); }
+  .tab.active {
+    background: var(--bg-elevated);
+    color: var(--text);
+    box-shadow: var(--shadow-sm);
+  }
+  .tab.current::after {
+    content: ''; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--brand); box-shadow: 0 0 0 0 var(--brand);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .tab .count {
+    font-size: 11px; color: var(--text-tertiary);
+    font-variant-numeric: tabular-nums; font-weight: 500;
+  }
+  .tab.active .count { color: var(--brand); font-weight: 700; }
+  .tab-divider { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
+
+  /* =========================================================================
+     DID YOU KNOW — slim banner
+     ========================================================================= */
+  .dyk {
+    display: flex; align-items: center; gap: 16px;
+    padding: 14px 20px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border); border-radius: var(--r-md);
+    margin-bottom: 28px;
+    position: relative; overflow: hidden;
+    transition: border-color 0.2s var(--ease);
+  }
+  .dyk:hover { border-color: var(--border-strong); }
+  .dyk::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: linear-gradient(to bottom, var(--gold), var(--brand));
+  }
+  .dyk-icon {
+    flex-shrink: 0; width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--gold-bg); color: var(--gold);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px;
+    font-family: 'Fraunces', serif; font-style: italic;
+  }
+  .dyk-content { flex: 1; min-width: 0; }
+  .dyk-label {
+    font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+    font-weight: 700; color: var(--text-tertiary); margin-bottom: 2px;
+  }
+  .dyk-text {
+    font-size: 14px; color: var(--text); line-height: 1.45;
+    transition: opacity 0.3s ease;
+  }
+  .dyk-text strong { color: var(--brand); font-weight: 700; }
+  .dyk-next {
+    flex-shrink: 0; padding: 6px 12px;
+    background: var(--bg-subtle); border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+    border-radius: var(--r-sm); cursor: pointer;
+    transition: all 0.15s var(--ease);
+  }
+  .dyk-next:hover {
+    background: var(--brand); color: var(--text-inverse); border-color: var(--brand);
+  }
+
+  /* =========================================================================
+     KPI GRID
+     ========================================================================= */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .kpi {
+    padding: 18px 20px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border); border-radius: var(--r-md);
+    transition: all 0.2s var(--ease);
+    position: relative; overflow: hidden;
+    animation: cardIn 0.4s var(--ease) backwards;
+  }
+  .kpi:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-strong);
+  }
+  .kpi-label {
+    font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+    font-weight: 600; color: var(--text-tertiary);
+    margin-bottom: 8px;
+  }
+  .kpi-value {
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: 36px; line-height: 1; letter-spacing: -0.025em;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 6px;
+  }
+  .kpi-foot { font-size: 12px; color: var(--text-tertiary); line-height: 1.4; }
+  .kpi-foot strong { color: var(--brand); font-weight: 700; }
+
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .kpi:nth-child(1) { animation-delay: 0ms; }
+  .kpi:nth-child(2) { animation-delay: 40ms; }
+  .kpi:nth-child(3) { animation-delay: 80ms; }
+  .kpi:nth-child(4) { animation-delay: 120ms; }
+  .kpi:nth-child(5) { animation-delay: 160ms; }
+  .kpi:nth-child(6) { animation-delay: 200ms; }
+
+  /* =========================================================================
+     SECTIONS, CARDS
+     ========================================================================= */
+  .section { margin-bottom: 48px; }
+  .section-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 16px; gap: 16px;
+  }
+  .section-head h2 {
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: 22px; letter-spacing: -0.015em;
+    color: var(--text); line-height: 1.2;
+  }
+  .section-head h2 em { font-style: italic; color: var(--brand); font-weight: 500; }
+  .section-meta {
+    font-size: 12px; color: var(--text-tertiary);
+    letter-spacing: 0.02em; font-weight: 500;
+  }
+  .section-meta::before { content: '/'; margin-right: 6px; color: var(--gold); }
+
+  .card-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border); border-radius: var(--r-md);
+    padding: 24px;
+    transition: all 0.2s var(--ease);
+    animation: cardIn 0.4s var(--ease) backwards;
+  }
+  .card:hover { border-color: var(--border-strong); }
+  .card-title {
+    font-size: 14px; font-weight: 700; color: var(--text);
+    margin-bottom: 4px; letter-spacing: -0.005em;
+  }
+  .card-sub {
+    font-size: 12px; color: var(--text-tertiary);
+    margin-bottom: 20px; letter-spacing: 0.01em;
+  }
+
+  /* =========================================================================
+     CHARTS
+     ========================================================================= */
+  .chart-wrap { position: relative; height: 280px; }
+  .chart-wrap.tall { height: 320px; }
+
+  .chart-legend { display: flex; flex-direction: column; gap: 0; margin-top: 16px; }
+  .legend-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 13px;
+    transition: background 0.15s ease;
+  }
+  .legend-row:last-child { border-bottom: none; }
+  .legend-row:hover {
+    background: var(--bg-subtle);
+    margin: 0 -8px; padding-left: 8px; padding-right: 8px;
+    border-radius: var(--r-sm);
+  }
+  .legend-left { display: flex; align-items: center; gap: 10px; }
+  .legend-swatch { width: 10px; height: 10px; border-radius: 2px; }
+  .legend-name { font-weight: 600; color: var(--text); }
+  .legend-name .code {
+    font-size: 11px; color: var(--text-tertiary);
+    font-weight: 500; margin-left: 4px;
+  }
+  .legend-right { display: flex; align-items: baseline; gap: 6px; }
+  .legend-val {
+    font-size: 14px; font-weight: 700; color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .legend-pct { font-size: 11px; color: var(--text-tertiary); }
+
+  /* =========================================================================
+     HALL OF FAME
+     ========================================================================= */
+  .hof-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+  }
+  .hof-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border); border-radius: var(--r-md);
+    padding: 20px;
+    cursor: pointer; transition: all 0.2s var(--ease);
+    position: relative; overflow: hidden;
+    animation: cardIn 0.4s var(--ease) backwards;
+  }
+  .hof-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--brand);
+  }
+  .hof-card.featured {
+    background: linear-gradient(135deg, var(--bg-dark) 0%, #2A211A 100%);
+    border-color: var(--bg-dark);
+    color: var(--text-inverse);
+  }
+  .hof-card.featured:hover {
+    border-color: var(--gold);
+    box-shadow: 0 12px 32px rgba(26,20,16,0.20);
+  }
+  .hof-card.featured .hof-label { color: var(--gold); }
+  .hof-card.featured .hof-value { color: var(--text-inverse); }
+  .hof-card.featured .hof-detail { color: rgba(255,255,255,0.7); }
+  .hof-card.featured .hof-detail strong { color: var(--gold); }
+  .hof-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px;
+    border-radius: var(--r-sm);
+    background: var(--gold-bg); color: var(--gold);
+    font-family: 'Fraunces', serif; font-weight: 700; font-size: 16px;
+    margin-bottom: 14px;
+  }
+  .hof-card.featured .hof-icon { background: rgba(201,169,97,0.2); color: var(--gold); }
+  .hof-label {
+    font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    font-weight: 700; color: var(--text-tertiary);
+    margin-bottom: 8px;
+  }
+  .hof-value {
+    font-family: 'Fraunces', serif; font-weight: 500;
+    font-size: 19px; line-height: 1.2;
+    color: var(--text); letter-spacing: -0.01em;
+    margin-bottom: 8px;
+  }
+  .hof-value .origin {
+    font-size: 13px; color: var(--text-tertiary);
+    font-style: italic; font-weight: 400; margin-left: 2px;
+  }
+  .hof-detail { font-size: 12px; color: var(--text-tertiary); line-height: 1.5; }
+  .hof-detail strong { color: var(--brand); font-weight: 700; }
+
+  /* =========================================================================
+     TRAINER LEADERBOARD
+     ========================================================================= */
+  .trainer-board {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 32px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border); border-radius: var(--r-md);
+    padding: 8px 24px;
+  }
+  .trainer-row {
+    display: grid;
+    grid-template-columns: 28px 1fr auto auto;
+    align-items: center; gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    transition: padding 0.15s var(--ease);
+    cursor: pointer;
+  }
+  .trainer-row:hover { padding-left: 8px; }
+  .trainer-row:hover .trainer-name { color: var(--brand); }
+  .trainer-rank {
+    font-size: 12px; font-weight: 700;
+    color: var(--text-tertiary);
+    font-variant-numeric: tabular-nums;
+  }
+  .trainer-rank.top { color: var(--brand); }
+  .trainer-name {
+    font-weight: 600; font-size: 14px; color: var(--text);
+    transition: color 0.15s ease;
+  }
+  .trainer-meta { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+  .country-chip {
+    display: inline-flex; align-items: center;
+    padding: 3px 8px;
+    background: var(--bg-subtle); border-radius: var(--r-sm);
+    font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+    color: var(--text-secondary);
+  }
+  .trainer-wins {
+    font-weight: 700; font-size: 14px;
+    color: var(--brand);
+    font-variant-numeric: tabular-nums;
+    text-align: right; min-width: 28px;
+  }
+  .trainer-wins.zero { color: var(--text-disabled); font-weight: 500; }
+
+  /* =========================================================================
+     WINNERS TIMELINE
+     ========================================================================= */
+  .timeline {
+    position: relative;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border); border-radius: var(--r-md);
+    padding: 8px 24px 8px 56px;
+  }
+  .timeline::before {
+    content: ''; position: absolute;
+    left: 30px; top: 16px; bottom: 16px;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--brand) 0%, var(--gold) 50%, var(--border-strong));
+    border-radius: 1px;
+  }
+  .win-item {
+    position: relative; padding: 14px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    display: grid;
+    grid-template-columns: 90px 1fr auto;
+    gap: 20px; align-items: center;
+  }
+  .win-item:last-child { border-bottom: none; }
+  .win-item::before {
+    content: ''; position: absolute;
+    left: -33px; top: 50%; transform: translateY(-50%);
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--bg-elevated); border: 2px solid var(--brand);
+    transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
+  }
+  .win-item:hover::before {
+    transform: translateY(-50%) scale(1.25);
+    box-shadow: 0 0 0 4px var(--brand-soft);
+  }
+  .win-item.dual::before {
+    background: var(--brand);
+    box-shadow: 0 0 0 3px var(--bg-elevated), 0 0 0 4px var(--gold);
+  }
+  .win-date {
+    font-size: 11px; color: var(--brand);
+    font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .win-date .day {
+    display: block;
+    font-family: 'Fraunces', serif; font-size: 22px; font-weight: 400;
+    color: var(--text); text-transform: none;
+    letter-spacing: -0.02em; line-height: 1; margin-bottom: 2px;
+  }
+  .win-horse {
+    font-family: 'Fraunces', serif; font-size: 18px; font-weight: 500;
+    color: var(--text); letter-spacing: -0.01em;
+  }
+  .win-horse .origin {
+    font-size: 11px; color: var(--text-tertiary);
+    font-style: italic; font-weight: 400; margin-left: 4px;
+  }
+  .win-details { font-size: 12px; color: var(--text-tertiary); margin-top: 4px; }
+  .win-details .race { color: var(--brand); font-weight: 600; }
+  .win-details .sep { color: var(--text-disabled); margin: 0 6px; }
+  .win-badge {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 4px 9px; border-radius: var(--r-pill);
+    flex-shrink: 0;
+  }
+  .win-badge.dual { background: var(--gold); color: var(--text); }
+  .win-badge.solo { background: var(--brand-soft); color: var(--brand); }
+
+  /* =========================================================================
+     REGISTER TABLE
+     ========================================================================= */
+  .register-toolbar {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px; flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    padding: 6px 12px;
+    font-size: 12px; font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border); border-radius: var(--r-pill);
+    cursor: pointer; transition: all 0.15s var(--ease);
+    white-space: nowrap;
+  }
+  .chip:hover { border-color: var(--border-strong); color: var(--text); }
+  .chip.active { background: var(--brand); color: var(--text-inverse); border-color: var(--brand); }
+  .chip .count { margin-left: 4px; font-weight: 500; opacity: 0.7; font-variant-numeric: tabular-nums; }
+  .table-search { position: relative; flex: 1; min-width: 200px; max-width: 280px; }
+  .table-search input {
+    width: 100%; height: 34px;
+    padding: 0 12px 0 34px;
+    font-size: 12px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border); border-radius: var(--r-md);
+    outline: none; transition: all 0.15s var(--ease);
+  }
+  .table-search input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-ring); }
+  .table-search::before {
+    content: ''; position: absolute;
+    left: 12px; top: 50%; width: 13px; height: 13px;
+    transform: translateY(-50%);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='%238A8174' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    pointer-events: none;
+  }
+
+  .table-wrap {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border); border-radius: var(--r-md);
+    overflow: hidden;
+  }
+  .register-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .register-table thead { background: var(--bg-subtle); border-bottom: 1px solid var(--border); }
+  .register-table th {
+    text-align: left; padding: 12px 16px;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+  .register-table tbody tr {
+    border-bottom: 1px solid var(--border-subtle);
+    transition: background 0.12s ease;
+  }
+  .register-table tbody tr:last-child { border-bottom: none; }
+  .register-table tbody tr:hover { background: var(--bg-subtle); }
+  .register-table tbody tr.winner { background: var(--brand-bg); }
+  .register-table tbody tr.winner:hover { background: var(--brand-soft); }
+  .register-table td { padding: 12px 16px; vertical-align: middle; }
+  .register-table .horse-name {
+    font-weight: 600; color: var(--text);
+    cursor: pointer; transition: color 0.12s ease;
+  }
+  .register-table .horse-name:hover { color: var(--brand); }
+  .register-table .horse-name .origin {
+    font-size: 11px; color: var(--text-tertiary);
+    font-style: italic; font-weight: 400; margin-left: 4px;
+  }
+  .register-table .trainer-cell {
+    color: var(--text-secondary);
+    cursor: pointer; transition: color 0.12s ease;
+  }
+  .register-table .trainer-cell:hover { color: var(--brand); }
+  .country-pill {
+    display: inline-block; padding: 3px 8px;
+    border-radius: var(--r-sm);
+    font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+    color: var(--text-inverse);
+  }
+  .country-pill.gb  { background: var(--c-gb); }
+  .country-pill.ire { background: var(--c-ire); }
+  .country-pill.fr  { background: var(--c-fr); }
+  .country-pill.uae { background: var(--c-uae); }
+  .country-pill.ger { background: var(--c-ger); }
+  .country-pill.jpn { background: var(--c-jpn); }
+  .country-pill.nor { background: var(--c-nor); }
+  .country-pill.qat { background: var(--c-qat); }
+  .comp-tag {
+    display: inline-block; padding: 3px 8px;
+    border-radius: var(--r-sm);
+    font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+  }
+  .comp-tag.bit { background: var(--brand); color: var(--text-inverse); }
+  .comp-tag.bts { background: var(--gold); color: var(--text); }
+  .comp-tag.snc, .comp-tag.cpc, .comp-tag.kc { background: var(--bg-dark); color: var(--text-inverse); }
+  .win-cell {
+    text-align: center; font-weight: 700;
+    color: var(--brand); font-variant-numeric: tabular-nums;
+    font-size: 14px;
+  }
+  .win-cell.none { color: var(--text-disabled); font-weight: 500; }
+  .win-cell .badge {
+    display: inline-block; margin-left: 4px;
+    font-size: 9px; font-weight: 700;
+    color: var(--gold); letter-spacing: 0.06em;
+  }
+  .empty-state td {
+    text-align: center; padding: 48px 24px;
+    color: var(--text-tertiary); font-size: 13px;
+  }
+
+  /* =========================================================================
+     PREMIER RACES (per season)
+     ========================================================================= */
+  .premier-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .premier-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border); border-radius: var(--r-md);
+    padding: 20px;
+    position: relative; overflow: hidden;
+    transition: all 0.2s var(--ease);
+    animation: cardIn 0.4s var(--ease) backwards;
+  }
+  .premier-card:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+  }
+  .premier-card::before {
+    content: ''; position: absolute;
+    top: 0; left: 0; right: 0; height: 3px;
+    background: var(--brand);
+  }
+  .premier-card.kings::before { background: linear-gradient(90deg, var(--gold), var(--brand)); }
+  .premier-name {
+    font-family: 'Fraunces', serif; font-size: 16px; font-weight: 500;
+    color: var(--text); line-height: 1.2; letter-spacing: -0.01em;
+    margin-bottom: 4px;
+  }
+  .premier-date {
+    font-size: 10px; color: var(--text-tertiary);
+    letter-spacing: 0.12em; text-transform: uppercase;
+    font-weight: 600; margin-bottom: 14px;
+  }
+  .premier-result {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 13px;
+  }
+  .premier-result:last-of-type { border-bottom: none; }
+  .pr-pos {
+    width: 28px;
+    font-family: 'Fraunces', serif; font-weight: 500;
+    color: var(--text-tertiary); font-size: 14px;
+  }
+  .pr-pos.first { color: var(--brand); }
+  .pr-info { flex: 1; min-width: 0; }
+  .pr-horse {
+    font-weight: 600; color: var(--text); font-size: 13px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .pr-horse .origin {
+    font-size: 10px; color: var(--text-tertiary);
+    font-style: italic; font-weight: 400; margin-left: 2px;
+  }
+  .pr-trainer {
+    font-size: 11px; color: var(--text-tertiary); margin-top: 1px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .pr-flag {
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+    padding: 2px 6px;
+    background: var(--bg-subtle); border-radius: var(--r-sm);
+    flex-shrink: 0;
+  }
+
+  /* =========================================================================
+     MODAL
+     ========================================================================= */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(26,20,16,0.55);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    z-index: 300;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 5vh 16px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s var(--ease);
+    overflow-y: auto;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: auto; }
+  .modal {
+    width: 100%; max-width: 720px;
+    background: var(--bg-elevated);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-xl);
+    transform: translateY(20px) scale(0.97);
+    transition: transform 0.32s var(--ease-bounce);
+    position: relative; overflow: hidden;
+  }
+  .modal-overlay.open .modal { transform: translateY(0) scale(1); }
+  .modal-close {
+    position: absolute; top: 16px; right: 16px;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--bg-subtle); border: 1px solid var(--border);
+    color: var(--text-secondary);
+    cursor: pointer; font-size: 18px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.18s var(--ease);
+    z-index: 10;
+  }
+  .modal-close:hover {
+    background: var(--brand); color: var(--text-inverse);
+    border-color: var(--brand);
+    transform: rotate(90deg);
+  }
+  .modal-head {
+    padding: 32px 36px 24px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, var(--bg-elevated) 0%, var(--bg-subtle) 100%);
+  }
+  .modal-eyebrow {
+    font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--brand); font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .modal-title {
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: 30px; line-height: 1.1; letter-spacing: -0.025em;
+    color: var(--text);
+  }
+  .modal-title .origin {
+    font-size: 18px; color: var(--text-tertiary);
+    font-style: italic; font-weight: 400; margin-left: 8px;
+  }
+  .modal-sub {
+    font-size: 12px; color: var(--text-tertiary);
+    margin-top: 8px;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  }
+  .modal-sub .pill {
+    display: inline-block; padding: 3px 9px;
+    background: var(--bg-elevated); border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    font-size: 11px; font-weight: 600;
+    color: var(--text-secondary);
+  }
+  .modal-body { padding: 24px 36px 32px; }
+  .modal-stats {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    margin: 0 -36px 24px;
+    border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .ms { padding: 16px 18px; border-right: 1px solid var(--border); }
+  .ms:last-child { border-right: none; }
+  .ms-label {
+    font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    font-weight: 700; color: var(--text-tertiary);
+    margin-bottom: 6px;
+  }
+  .ms-value {
+    font-family: 'Fraunces', serif; font-weight: 400;
+    font-size: 26px; line-height: 1;
+    color: var(--text); letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .ms-value.win { color: var(--brand); }
+  .modal-section-label {
+    font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+    font-weight: 700; color: var(--text-tertiary);
+    margin: 20px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-section-label:first-child { margin-top: 0; }
+  .modal-race {
+    display: grid; grid-template-columns: 72px 1fr auto;
+    gap: 16px; align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .modal-race:last-child { border-bottom: none; }
+  .mr-date {
+    font-size: 10px; color: var(--brand);
+    font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+    line-height: 1.2;
+  }
+  .mr-date .day {
+    display: block;
+    font-family: 'Fraunces', serif; font-size: 18px; font-weight: 400;
+    color: var(--text); text-transform: none;
+    letter-spacing: -0.02em; line-height: 1; margin-bottom: 2px;
+  }
+  .mr-info { font-size: 13px; min-width: 0; }
+  .mr-info .race { font-weight: 600; color: var(--text); }
+  .mr-info .race.clickable { cursor: pointer; transition: color 0.12s ease; }
+  .mr-info .race.clickable:hover { color: var(--brand); }
+  .mr-info .sub { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+  .mr-badge {
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 4px 9px; border-radius: var(--r-pill);
+    background: var(--gold); color: var(--text);
+    flex-shrink: 0;
+  }
+  .modal-horse-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 0 24px;
+  }
+  .modal-horse-grid > div {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 13px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-horse-grid .h-name {
+    font-weight: 600; color: var(--text);
+    cursor: pointer; transition: color 0.12s ease;
+  }
+  .modal-horse-grid .h-name:hover { color: var(--brand); }
+  .modal-horse-grid .h-name .origin {
+    font-size: 10px; color: var(--text-tertiary);
+    font-style: italic; font-weight: 400; margin-left: 3px;
+  }
+  .modal-horse-grid .h-wins {
+    font-weight: 700; font-size: 13px;
+    color: var(--brand); font-variant-numeric: tabular-nums;
+  }
+  .modal-horse-grid .h-wins.zero { color: var(--text-disabled); font-weight: 500; }
+
+  /* =========================================================================
+     STATE: LOADING / ERROR
+     ========================================================================= */
+  .state {
+    min-height: 70vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; gap: 16px; padding: 32px;
+  }
+  .state .label {
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--text-tertiary); font-weight: 700;
+  }
+  .state h2 {
+    font-family: 'Fraunces', serif; font-weight: 400; font-size: 28px;
+    color: var(--text);
+  }
+  .state p {
+    max-width: 460px;
+    color: var(--text-secondary);
+    font-size: 14px; line-height: 1.7;
+  }
+  .state code {
+    background: var(--bg-subtle);
+    padding: 2px 8px; border-radius: var(--r-sm);
+    font-size: 12px;
+    font-family: 'SFMono-Regular', Menlo, monospace;
+    color: var(--brand);
+    border: 1px solid var(--border);
+  }
+  .spinner {
+    width: 32px; height: 32px;
+    border: 2px solid var(--border);
+    border-top-color: var(--brand);
+    border-radius: 50%;
+    animation: spin 0.85s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* =========================================================================
+     FOOTER
+     ========================================================================= */
+  .footer {
+    margin-top: 64px; padding-top: 24px;
+    border-top: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 16px; flex-wrap: wrap;
+    font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.06em;
+  }
+  .footer .mono {
+    font-family: 'Fraunces', serif; font-style: italic;
+    text-transform: none; color: var(--brand);
+    letter-spacing: 0.02em; font-size: 13px;
+  }
+  .footer a {
+    color: var(--text-tertiary); text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: all 0.12s ease;
+    padding-bottom: 1px;
+  }
+  .footer a:hover { color: var(--brand); border-bottom-color: var(--brand); }
+
+  /* =========================================================================
+     CONFETTI CANVAS
+     ========================================================================= */
+  #confettiCanvas { position: fixed; inset: 0; pointer-events: none; z-index: 90; }
+
+  /* =========================================================================
+     A11Y FOCUS
+     ========================================================================= */
+  button:focus-visible, input:focus-visible, .chip:focus-visible {
+    outline: 2px solid var(--brand); outline-offset: 2px;
+  }
+
+  /* =========================================================================
+     RESPONSIVE
+     ========================================================================= */
+  @media (max-width: 900px) {
+    .page { padding: 0 16px 64px; }
+    .topbar { margin: 0 -16px 16px; padding: 0 16px; }
+    .topbar-inner { height: auto; padding: 12px 0; flex-wrap: wrap; }
+    .search-wrap { width: 100%; order: 3; }
+    .topbar-spacer { display: none; }
+    .live-pill { margin-left: auto; }
+    .hero { padding: 20px 0 16px; }
+    .hero h1 { font-size: 32px; }
+    .card-grid-2 { grid-template-columns: 1fr; }
+    .trainer-board { grid-template-columns: 1fr; }
+    .modal-stats { grid-template-columns: repeat(2, 1fr); }
+    .modal-stats .ms { border-bottom: 1px solid var(--border); }
+    .modal-stats .ms:nth-child(2n) { border-right: none; }
+    .modal-horse-grid { grid-template-columns: 1fr; }
+    .modal-head { padding: 24px 24px 20px; }
+    .modal-body { padding: 20px 24px 28px; }
+    .modal-stats { margin: 0 -24px 20px; }
+    .modal-title { font-size: 22px; }
+    .win-item { grid-template-columns: 70px 1fr; gap: 12px; }
+    .win-badge { grid-column: 1 / -1; justify-self: start; margin-top: 4px; }
+    .register-table { font-size: 12px; }
+    .register-table th, .register-table td { padding: 10px 12px; }
+    .register-table th:nth-child(2), .register-table td:nth-child(2) { display: none; }
+    .dyk { flex-direction: column; align-items: flex-start; }
+    .dyk-next { align-self: flex-end; }
+  }
+  @media (max-width: 560px) {
+    .register-table th:nth-child(4), .register-table td:nth-child(4) { display: none; }
+    .hero h1 { font-size: 26px; }
+    .kpi-value { font-size: 30px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     TOPBAR — brand · spacer · search · live pill
+     ============================================================ -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="./">
+      <img class="brand-logo" src="./assets/btc-crest.png" alt="Bahrain Turf Club">
+      <span class="brand-name">
+        <span class="top">Bahrain Turf Club</span>
+        <span class="sub">International Tracker</span>
+      </span>
+    </a>
+    <div class="topbar-spacer"></div>
+    <div class="search-wrap" id="searchWrap" style="display:none">
+      <input type="text" id="globalSearch" placeholder="Search horses, trainers, races…" autocomplete="off">
+      <kbd class="search-kbd">⌘ K</kbd>
+      <div class="search-results" id="searchResults"></div>
+    </div>
+    <div class="live-pill" id="livePill" style="display:none">
+      <span class="live-dot"></span>
+      <span id="liveLabel">Live</span>
+    </div>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- HERO -->
+  <section class="hero" id="heroSection" style="display:none">
+    <div class="hero-text">
+      <div class="eyebrow">International Participation</div>
+      <h1>Every overseas runner,<br><em>every winner.</em></h1>
+      <div class="hero-meta" id="heroMeta"></div>
+    </div>
+  </section>
+
+  <!-- LOADING / ERROR STATE -->
+  <div id="stateEl" class="state">
+    <div class="spinner"></div>
+    <div class="label">Loading tracker data</div>
+  </div>
+
+  <!-- APP -->
+  <div id="appEl" style="display:none">
+    <div class="season-tabs-wrap" id="seasonTabsWrap"></div>
+    <div id="content"></div>
+  </div>
+
+  <footer class="footer">
+    <div>BTC · Riffa · Kingdom of Bahrain</div>
+    <div class="mono">All to play for</div>
+    <div>
+      <a href="./data/tracker.xlsx" download>Source XLSX</a>
+      &nbsp;·&nbsp;
+      <a href="./data/seasons.json">Raw JSON</a>
+    </div>
+  </footer>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modal">
+    <button class="modal-close" id="modalClose" aria-label="Close">×</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<!-- CONFETTI CANVAS -->
+<canvas id="confettiCanvas" aria-hidden="true"></canvas>
+
+<script>
+/* =============================================================
+   PALETTE — keep in sync with CSS vars
+   ============================================================= */
+const PALETTE = {
+  brand:'#980B2C', gold:'#C9A961',
+  ink:'#1A1410', inkSoft:'#5C544D', inkTertiary:'#8A8174',
+  paper:'#FAFAF7',
+};
+const COUNTRY_COLORS = {
+  GB:'#1B3F8F', IRE:'#169B62', FR:'#2E5E9E', UAE:'#2D2D2D',
+  GER:'#524A42', JPN:'#BC002D', NOR:'#BA0C2F', QAT:'#8D1B3D',
+  USA:'#3C3B6E', BHR:'#CE1126'
+};
+const COUNTRY_FULL = {
+  GB:'Great Britain', IRE:'Ireland', FR:'France', UAE:'United Arab Emirates',
+  GER:'Germany', JPN:'Japan', NOR:'Norway', QAT:'Qatar',
+  USA:'United States', BHR:'Bahrain'
+};
+const COMP_FULL = {
+  BIT:"Bahrain International Trophy",
+  BTS:"Bahrain Turf Series",
+  "HH Shaikh Nasser Cup":"HH Shaikh Nasser Cup",
+  "Crown Prince Cup":"HRH The Crown Prince's Cup",
+};
+const KINGS_CUP = String.fromCharCode(75,105,110,103,39,115,32,67,117,112);
+const KINGS_CUP_SHORT = String.fromCharCode(75,73,78,71,39,83,32,67,85,80);
+COMP_FULL[KINGS_CUP] = "HM The King's Cup";
+
+let DATA = null;
+let activeKey = null;
+let charts = [];
+
+/* =============================================================
+   HELPERS
+   ============================================================= */
+function destroyCharts(){ charts.forEach(c=>{try{c.destroy()}catch(e){}}); charts=[]; }
+function el(tag, props, ...children){
+  props = props || {};
+  const e = document.createElement(tag);
+  for(const [k,v] of Object.entries(props)){
+    if(k==='class') e.className = v;
+    else if(k==='html') e.innerHTML = v;
+    else if(k.startsWith('on')) e.addEventListener(k.slice(2).toLowerCase(), v);
+    else if(k==='style' && typeof v==='object') Object.assign(e.style, v);
+    else if(k==='data' && typeof v==='object') for(const [dk,dv] of Object.entries(v)) e.dataset[dk]=dv;
+    else e.setAttribute(k, v);
+  }
+  for(const c of children) if(c!=null) e.append(c.nodeType?c:document.createTextNode(c));
+  return e;
+}
+function fmtDate(iso){
+  if(!iso) return '';
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(!m) return iso;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return { day:m[3], mon:months[parseInt(m[2])-1], yr:m[1].slice(2) };
+}
+function pillClass(code){ return (code||'').toLowerCase(); }
+function compClass(c){
+  if(c==='BIT') return 'bit';
+  if(c==='BTS') return 'bts';
+  if(c==='HH Shaikh Nasser Cup') return 'snc';
+  if(c==='Crown Prince Cup') return 'cpc';
+  if(c===KINGS_CUP) return 'kc';
+  return '';
+}
+function shortComp(c){
+  if(c==='HH Shaikh Nasser Cup') return 'SHAIKH NASSER';
+  if(c==='Crown Prince Cup') return 'CROWN PRINCE';
+  if(c===KINGS_CUP) return KINGS_CUP_SHORT;
+  return c || '';
+}
+function fullMonth(abbr){
+  const m={Jan:'January',Feb:'February',Mar:'March',Apr:'April',May:'May',Jun:'June',
+    Jul:'July',Aug:'August',Sep:'September',Oct:'October',Nov:'November',Dec:'December'};
+  return m[abbr]||abbr;
+}
+function resultRank(r){
+  if(!r) return 99;
+  const m = String(r).match(/(\d+)/);
+  return m ? parseInt(m[1]) : 99;
+}
+function uniqueTrainers(reg){ return new Set(reg.map(h=>h.trainer).filter(Boolean)).size; }
+function dualNames(s){ return s.register.filter(h=>h.wins>=2).map(h=>h.name).join(' · '); }
+
+/* =============================================================
+   INIT
+   ============================================================= */
+async function init(){
+  try {
+    const res = await fetch('./data/seasons.json', {cache:'no-cache'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    DATA = await res.json();
+  } catch(err){
+    document.getElementById('stateEl').innerHTML = `
+      <div class="label">Data load failed</div>
+      <h2>Couldn't reach <code>data/seasons.json</code></h2>
+      <p>If viewing locally, open via a small web server (browsers block local <code>fetch</code> by default):</p>
+      <p><code>python3 -m http.server</code><br>then visit <code>http://localhost:8000</code></p>
+      <p style="font-size:12px;opacity:0.7">${err.message}</p>`;
+    return;
+  }
+  document.getElementById('stateEl').style.display = 'none';
+  document.getElementById('appEl').style.display = 'block';
+  document.getElementById('searchWrap').style.display = 'block';
+  document.getElementById('livePill').style.display = 'inline-flex';
+  document.getElementById('heroSection').style.display = 'flex';
+
+  const latest = DATA.seasons[DATA.seasons.length-1];
+  activeKey = latest.season;
+
+  document.getElementById('liveLabel').textContent = latest.season;
+  const gen = new Date(DATA.generated_at);
+  const t = DATA.totals;
+  document.getElementById('heroMeta').innerHTML =
+    `<strong>${t.seasons}</strong> seasons tracked · <strong>${t.horses}</strong> horses · <strong>${t.wins}</strong> international wins · updated ${gen.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}`;
+
+  buildSearchIndex();
+  wireGlobalSearch();
+  wireModal();
+  wireKeyboardShortcuts();
+
+  renderTabs();
+  renderActive();
+}
+
+/* =============================================================
+   SEASON TABS
+   ============================================================= */
+function renderTabs(){
+  const wrap = document.getElementById('seasonTabsWrap');
+  wrap.innerHTML = '';
+  const latest = DATA.seasons[DATA.seasons.length-1].season;
+
+  const group1 = el('div',{class:'season-tabs'});
+  group1.append(makeTab('ALL','All seasons', DATA.totals.horses, false));
+  wrap.append(group1);
+  wrap.append(el('div',{class:'tab-divider'}));
+
+  const group2 = el('div',{class:'season-tabs'});
+  [...DATA.seasons].reverse().forEach(s=>{
+    group2.append(makeTab(s.season, s.season, s.stats.horses, s.season===latest));
+  });
+  wrap.append(group2);
+}
+function makeTab(key, label, count, isCurrent){
+  const btn = el('button',{class:'tab'+(activeKey===key?' active':'')+(isCurrent?' current':'')});
+  btn.append(label);
+  btn.append(el('span',{class:'count'}, '· '+count));
+  btn.addEventListener('click', ()=>{
+    if(activeKey===key) return;
+    activeKey = key;
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    btn.classList.add('active');
+    renderActive();
+    const tabsTop = document.getElementById('seasonTabsWrap').offsetTop;
+    window.scrollTo({top: Math.max(0, tabsTop-80), behavior:'smooth'});
+  });
+  return btn;
+}
+
+/* =============================================================
+   ROUTER
+   ============================================================= */
+function renderActive(){
+  destroyCharts();
+  const content = document.getElementById('content');
+  content.innerHTML = '';
+  if(activeKey==='ALL') renderOverview(content);
+  else {
+    const s = DATA.seasons.find(x=>x.season===activeKey);
+    if(s) renderSeason(content, s);
+  }
+  setTimeout(()=>{ animateCounters(content); enhanceInteractivity(content); }, 30);
+}
+
+/* =============================================================
+   KPI / SECTION HEAD HELPERS
+   ============================================================= */
+function kpiCell(label, value, foot){
+  const str = String(value);
+  const m = str.match(/^(\d+(?:\.\d+)?)(.*)$/);
+  const target = m ? m[1] : str;
+  const suffix = m ? m[2] : '';
+  const valueDiv = el('div',{class:'kpi-value'}, m ? '0'+suffix : str);
+  if(m){
+    valueDiv.dataset.target = target;
+    valueDiv.dataset.suffix = suffix;
+  }
+  return el('div',{class:'kpi'},
+    el('div',{class:'kpi-label'}, label),
+    valueDiv,
+    el('div',{class:'kpi-foot', html: foot})
+  );
+}
+function sectionHead(titleHTML, metaText){
+  const head = el('div',{class:'section-head'});
+  const h = el('h2');
+  h.innerHTML = titleHTML;
+  head.append(h);
+  if(metaText) head.append(el('div',{class:'section-meta'}, metaText));
+  return head;
+}
+
+/* =============================================================
+   OVERVIEW
+   ============================================================= */
+function renderOverview(root){
+  const seasons = DATA.seasons;
+  const totals = DATA.totals;
+
+  mountDidYouKnow(root, 'ALL');
+
+  const kpi = el('div',{class:'kpi-grid'});
+  kpi.append(
+    kpiCell("Seasons", totals.seasons, "tracked since 2019/20"),
+    kpiCell("Total horses", totals.horses, "international runners"),
+    kpiCell("Total wins", totals.wins, `across <strong>${totals.individual_winners}</strong> individual horses`),
+    kpiCell("Nations", totals.countries.length, totals.countries.join(' · ')),
+    kpiCell("Avg / season", Math.round(totals.horses/totals.seasons), "runners per season")
+  );
+  root.append(kpi);
+
+  const trends = el('section',{class:'section'});
+  trends.append(sectionHead("Trends across the <em>years</em>", `${seasons[0].season} — ${seasons[seasons.length-1].season}`));
+  const grid = el('div',{class:'card-grid-2'});
+
+  const c1 = el('div',{class:'card'},
+    el('div',{class:'card-title'},'Volume & wins by season'),
+    el('div',{class:'card-sub'},'International horses (bars) vs wins (line)')
+  );
+  const w1 = el('div',{class:'chart-wrap tall'}); w1.append(el('canvas',{id:'volumeChart'}));
+  c1.append(w1);
+
+  const c2 = el('div',{class:'card'},
+    el('div',{class:'card-title'},'Sending nations by season'),
+    el('div',{class:'card-sub'},'Stacked composition of int\u2019l runners')
+  );
+  const w2 = el('div',{class:'chart-wrap tall'}); w2.append(el('canvas',{id:'nationsChart'}));
+  c2.append(w2);
+
+  grid.append(c1, c2);
+  trends.append(grid);
+  root.append(trends);
+
+  renderHallOfFame(root);
+
+  /* All-time trainer leaderboard */
+  const tMap = {};
+  seasons.forEach(s=>s.register.forEach(h=>{
+    if(!h.trainer) return;
+    const t = tMap[h.trainer] || (tMap[h.trainer] = {name:h.trainer, country:h.country, runners:0, wins:0, seasons:new Set()});
+    t.runners++; t.wins += (h.wins||0); t.seasons.add(s.season);
+    if(h.country) t.country = h.country;
+  }));
+  const top = Object.values(tMap)
+    .map(t=>({...t, seasons:t.seasons.size}))
+    .sort((a,b)=>b.wins-a.wins||b.runners-a.runners||a.name.localeCompare(b.name))
+    .slice(0, 20);
+
+  const trSec = el('section',{class:'section'});
+  trSec.append(sectionHead("All-time <em>trainer</em> leaderboard","by total wins across all seasons"));
+  const board = el('div',{class:'trainer-board'});
+  top.forEach((t,i)=>{
+    const row = el('div',{class:'trainer-row'},
+      el('div',{class:'trainer-rank'+(i<3?' top':'')}, String(i+1).padStart(2,'0')),
+      el('div',{},
+        el('div',{class:'trainer-name'}, t.name),
+        el('div',{class:'trainer-meta'}, `${t.runners} ${t.runners===1?'runner':'runners'} · ${t.seasons} ${t.seasons===1?'season':'seasons'}`)),
+      el('div',{class:'country-chip'}, t.country || '—'),
+      el('div',{class:'trainer-wins'+(t.wins===0?' zero':'')}, t.wins===0?'—':String(t.wins))
+    );
+    row.addEventListener('click', ()=>openTrainerModal(t.name));
+    board.append(row);
+  });
+  trSec.append(board);
+  root.append(trSec);
+
+  setTimeout(()=>{ drawVolumeChart(seasons); drawNationsChart(seasons); }, 50);
+}
+
+/* =============================================================
+   SEASON VIEW
+   ============================================================= */
+function renderSeason(root, s){
+  mountDidYouKnow(root, s.season);
+
+  const st = s.stats;
+  const strike = st.horses ? Math.round(st.individual_winners/st.horses*100) : 0;
+
+  const kpi = el('div',{class:'kpi-grid'});
+  kpi.append(
+    kpiCell("Int'l horses", st.horses, s.by_competition.length+" competition lines"),
+    kpiCell("Int'l wins", st.wins, `<strong>${st.individual_winners}</strong> individual ${st.individual_winners===1?'horse':'horses'}`),
+    kpiCell("Multiple-winners", st.dual_winners, dualNames(s) || '—'),
+    kpiCell("Trainers", uniqueTrainers(s.register), `from <strong>${st.countries.length}</strong> ${st.countries.length===1?'nation':'nations'}`),
+    kpiCell("Strike rate", strike+'%', "winning horses / runners")
+  );
+  root.append(kpi);
+
+  if(s.register.length){
+    const sec = el('section',{class:'section'});
+    sec.append(sectionHead("The <em>field</em> at a glance","composition"));
+    const grid = el('div',{class:'card-grid-2'});
+
+    const c1 = el('div',{class:'card'},
+      el('div',{class:'card-title'},'By country of origin'),
+      el('div',{class:'card-sub'},`${st.horses} runners · ${s.season}`));
+    const w1 = el('div',{class:'chart-wrap'}); w1.append(el('canvas',{id:'countryChart'}));
+    c1.append(w1, el('div',{class:'chart-legend', id:'countryLegend'}));
+
+    const c2 = el('div',{class:'card'},
+      el('div',{class:'card-title'},'By competition'),
+      el('div',{class:'card-sub'},'Stacked by sending nation'));
+    const w2 = el('div',{class:'chart-wrap'}); w2.append(el('canvas',{id:'compChart'}));
+    c2.append(w2, el('div',{class:'chart-legend', id:'compLegend', style:{marginTop:'16px'}}));
+
+    grid.append(c1, c2);
+    sec.append(grid);
+    root.append(sec);
+  }
+
+  const tData = trainerLeaderboard(s);
+  if(tData.length){
+    const sec = el('section',{class:'section'});
+    sec.append(sectionHead("Leading <em>international</em> trainers","this season"));
+    const board = el('div',{class:'trainer-board'});
+    tData.forEach((t,i)=>{
+      const row = el('div',{class:'trainer-row'},
+        el('div',{class:'trainer-rank'+(i<3?' top':'')}, String(i+1).padStart(2,'0')),
+        el('div',{},
+          el('div',{class:'trainer-name'}, t.name),
+          el('div',{class:'trainer-meta'}, `${t.horses} ${t.horses===1?'runner':'runners'}`)),
+        el('div',{class:'country-chip'}, t.country || '—'),
+        el('div',{class:'trainer-wins'+(t.wins===0?' zero':'')}, t.wins===0?'—':String(t.wins))
+      );
+      row.addEventListener('click', ()=>openTrainerModal(t.name));
+      board.append(row);
+    });
+    sec.append(board);
+    root.append(sec);
+  }
+
+  const winSec = el('section',{class:'section'});
+  winSec.append(sectionHead("The <em>winner's enclosure</em>","wins, chronologically"));
+  if(s.winners.length){
+    const tl = el('div',{class:'timeline'});
+    [...s.winners].sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(w=>{
+      const d = fmtDate(w.date);
+      const dual = (w.win_no||1) >= 2 || /dual/i.test(w.note);
+      const item = el('div',{class:'win-item'+(dual?' dual':'')});
+      const dateBlock = el('div',{class:'win-date'});
+      if(typeof d==='object'){
+        dateBlock.append(el('span',{class:'day'}, d.day), `${d.mon} '${d.yr}`);
+      } else dateBlock.textContent = d || '—';
+      item.append(dateBlock);
+      item.append(el('div',{},
+        el('div',{class:'win-horse', html:`${w.name}${w.origin?`<span class="origin">(${w.origin})</span>`:''}`, data:{horse:w.name}}),
+        el('div',{class:'win-details', html:`<span class="race">${w.race||'—'}</span><span class="sep">/</span><span class="trainer-link" data-trainer="${w.trainer||''}">${w.trainer||''}</span>`})
+      ));
+      item.append(el('div',{class:'win-badge '+(dual?'dual':'solo')}, dual?`★ Win #${w.win_no||2}`:'Winner'));
+      tl.append(item);
+    });
+    winSec.append(tl);
+  } else {
+    const empty = el('div',{class:'timeline'});
+    empty.style.padding = '40px 24px';
+    empty.style.textAlign = 'center';
+    empty.style.color = 'var(--text-tertiary)';
+    empty.style.fontStyle = 'italic';
+    empty.textContent = 'No international winners recorded for this season.';
+    empty.style.paddingLeft = '24px';
+    winSec.append(empty);
+  }
+  root.append(winSec);
+
+  if(s.register.length){
+    const sec = el('section',{class:'section'});
+    sec.append(sectionHead("The full <em>register</em>","every international runner"));
+
+    const toolbar = el('div',{class:'register-toolbar'});
+    const chips = el('div',{class:'chips'});
+    const comps = [...new Set(s.register.map(h=>h.comp).filter(Boolean))];
+    const winsCount = s.register.filter(h=>h.winner).length;
+    const allChip = el('button',{class:'chip active'});
+    allChip.innerHTML = 'All <span class="count">'+s.register.length+'</span>';
+    allChip.dataset.filter = 'ALL';
+    chips.append(allChip);
+    comps.forEach(c=>{
+      const n = s.register.filter(h=>h.comp===c).length;
+      const b = el('button',{class:'chip'});
+      b.innerHTML = shortComp(c)+' <span class="count">'+n+'</span>';
+      b.dataset.filter = c;
+      chips.append(b);
+    });
+    if(winsCount>0){
+      const w = el('button',{class:'chip'});
+      w.innerHTML = '🏆 Winners <span class="count">'+winsCount+'</span>';
+      w.dataset.filter = 'WIN';
+      chips.append(w);
+    }
+    const search = el('div',{class:'table-search'});
+    const input = el('input',{type:'text',placeholder:'Search horse or trainer…'});
+    search.append(input);
+    toolbar.append(chips, search);
+    sec.append(toolbar);
+
+    const tableWrap = el('div',{class:'table-wrap'});
+    const table = el('table',{class:'register-table'});
+    table.append(el('thead',{},
+      el('tr',{},
+        el('th',{},'Horse'),
+        el('th',{},'Trainer'),
+        el('th',{},'Country'),
+        el('th',{},'Competition'),
+        el('th',{style:{textAlign:'center'}},'Wins'))
+    ));
+    const tbody = el('tbody');
+    table.append(tbody);
+    tableWrap.append(table);
+    sec.append(tableWrap);
+    root.append(sec);
+
+    const state = {filter:'ALL', q:''};
+    function paint(){
+      tbody.innerHTML = '';
+      const items = s.register.filter(h=>{
+        let f = true;
+        if(state.filter==='WIN') f = h.winner;
+        else if(state.filter!=='ALL') f = h.comp===state.filter;
+        const q = state.q.toLowerCase();
+        const m = !q || (h.name||'').toLowerCase().includes(q) || (h.trainer||'').toLowerCase().includes(q);
+        return f && m;
+      });
+      if(!items.length){
+        tbody.append(el('tr',{class:'empty-state'}, el('td',{colspan:'5'},'No horses match this filter.')));
+        return;
+      }
+      items.forEach(h=>{
+        const tr = el('tr',{class:h.winner?'winner':''});
+        tr.append(
+          el('td',{}, el('span',{class:'horse-name', data:{horse:h.name}, html:`${h.name}${h.origin?`<span class="origin">(${h.origin})</span>`:''}`})),
+          el('td',{class:'trainer-cell', data:{trainer:h.trainer||''}}, h.trainer || '—'),
+          el('td',{}, el('span',{class:'country-pill '+pillClass(h.country)}, h.country || '—')),
+          el('td',{}, el('span',{class:'comp-tag '+compClass(h.comp)}, shortComp(h.comp))),
+          el('td',{class:'win-cell'+(h.wins===0?' none':''),
+            html: h.wins===0 ? '—' : String(h.wins) + (h.wins>1?' <span class="badge">DUAL</span>':'')})
+        );
+        tbody.append(tr);
+      });
+      tbody.querySelectorAll('.horse-name').forEach(elm=>{
+        elm.addEventListener('click', ()=>openHorseModal(elm.dataset.horse));
+      });
+      tbody.querySelectorAll('.trainer-cell').forEach(elm=>{
+        if(elm.dataset.trainer) elm.addEventListener('click', ()=>openTrainerModal(elm.dataset.trainer));
+      });
+    }
+    chips.querySelectorAll('.chip').forEach(b=>b.addEventListener('click', ()=>{
+      chips.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      state.filter = b.dataset.filter;
+      paint();
+    }));
+    input.addEventListener('input', e=>{ state.q = e.target.value; paint(); });
+    paint();
+  }
+
+  if(s.additional && s.additional.length){
+    const sec = el('section',{class:'section'});
+    sec.append(sectionHead("The <em>premier</em> nights","carnival races"));
+    const grid = el('div',{class:'premier-grid'});
+    const byRace = {};
+    s.additional.forEach(r=>{ (byRace[r.race] = byRace[r.race] || []).push(r); });
+    Object.entries(byRace).forEach(([race, runners])=>{
+      const isKings = /king/i.test(race);
+      const card = el('div',{class:'premier-card'+(isKings?' kings':'')});
+      const dt = runners.map(r=>r.date).find(Boolean);
+      const fmt = fmtDate(dt);
+      const dateStr = typeof fmt==='object' ? `${fmt.day} ${fullMonth(fmt.mon)} 20${fmt.yr}` : (fmt || '');
+      card.append(
+        el('div',{class:'premier-name'}, race),
+        el('div',{class:'premier-date'}, dateStr || '—')
+      );
+      runners.sort((a,b)=>resultRank(a.result)-resultRank(b.result));
+      runners.forEach(r=>{
+        const pos = (r.result||'').trim();
+        const isFirst = /^1(st)?$/i.test(pos);
+        card.append(el('div',{class:'premier-result'},
+          el('div',{class:'pr-pos'+(isFirst?' first':'')}, pos || '—'),
+          el('div',{class:'pr-info'},
+            el('div',{class:'pr-horse', html:`${r.name}${r.origin?` <span class="origin">(${r.origin})</span>`:''}`}),
+            el('div',{class:'pr-trainer'}, r.trainer || '—')),
+          el('div',{class:'pr-flag'}, r.country || '—')
+        ));
+      });
+      grid.append(card);
+    });
+    sec.append(grid);
+    root.append(sec);
+  }
+
+  setTimeout(()=>{ drawCountryDonut(s); drawCompChart(s); }, 50);
+}
+
+/* =============================================================
+   CHARTS — modern, lighter strokes, soft tooltips
+   ============================================================= */
+function drawVolumeChart(seasons){
+  const ctx = document.getElementById('volumeChart');
+  if(!ctx) return;
+  const labels = seasons.map(s=>s.season);
+  charts.push(new Chart(ctx, {
+    data: {labels, datasets:[
+      { type:'bar', label:'Int\u2019l horses',
+        data: seasons.map(s=>s.stats.horses),
+        backgroundColor: PALETTE.brand, borderRadius: 4, yAxisID:'y',
+        barPercentage: 0.7, categoryPercentage: 0.85 },
+      { type:'line', label:'Int\u2019l wins',
+        data: seasons.map(s=>s.stats.wins),
+        borderColor: PALETTE.gold, backgroundColor: PALETTE.gold,
+        borderWidth: 2.5, pointRadius: 4, pointHoverRadius: 6,
+        pointBackgroundColor: PALETTE.gold, pointBorderColor: PALETTE.paper, pointBorderWidth: 2,
+        tension: 0.35, yAxisID:'y1' }
+    ]},
+    options: chartOptionsVolume()
+  }));
+}
+function drawNationsChart(seasons){
+  const ctx = document.getElementById('nationsChart');
+  if(!ctx) return;
+  const labels = seasons.map(s=>s.season);
+  const all = [...new Set(seasons.flatMap(s=>s.register.map(h=>h.country).filter(Boolean)))];
+  const ordered = all.map(c=>({c, n:seasons.reduce((a,s)=>a+s.register.filter(h=>h.country===c).length,0)}))
+    .sort((a,b)=>b.n-a.n).map(x=>x.c);
+  const datasets = ordered.map(c=>({
+    label: c,
+    data: seasons.map(s=>s.register.filter(h=>h.country===c).length),
+    backgroundColor: COUNTRY_COLORS[c] || PALETTE.inkTertiary,
+    borderWidth: 0, borderRadius: 2
+  }));
+  charts.push(new Chart(ctx, {type:'bar', data:{labels, datasets}, options: chartOptionsStacked()}));
+}
+function drawCountryDonut(s){
+  const ctx = document.getElementById('countryChart');
+  if(!ctx) return;
+  const counts = {};
+  s.register.forEach(h=>{ if(h.country) counts[h.country] = (counts[h.country]||0)+1; });
+  const labels = Object.keys(counts).sort((a,b)=>counts[b]-counts[a]);
+  const data = labels.map(k=>counts[k]);
+  const colors = labels.map(k=>COUNTRY_COLORS[k] || PALETTE.inkTertiary);
+  const total = data.reduce((a,b)=>a+b, 0);
+
+  charts.push(new Chart(ctx, {
+    type:'doughnut',
+    data: {labels, datasets:[{data, backgroundColor:colors, borderColor:PALETTE.paper, borderWidth:2, hoverOffset:6, hoverBorderWidth:3}]},
+    options: chartOptionsDonut(total)
+  }));
+
+  const legend = document.getElementById('countryLegend');
+  legend.innerHTML = '';
+  labels.forEach((k,i)=>{
+    legend.append(el('div',{class:'legend-row'},
+      el('div',{class:'legend-left'},
+        el('span',{class:'legend-swatch', style:{background:colors[i]}}),
+        el('span',{class:'legend-name', html:`${COUNTRY_FULL[k]||k}<span class="code">${k}</span>`})),
+      el('div',{class:'legend-right'},
+        el('span',{class:'legend-val'}, String(counts[k])),
+        el('span',{class:'legend-pct'}, (counts[k]/total*100).toFixed(0)+'%'))
+    ));
+  });
+}
+function drawCompChart(s){
+  const ctx = document.getElementById('compChart');
+  if(!ctx) return;
+  const comps = [...new Set(s.register.map(h=>h.comp).filter(Boolean))];
+  const countries = [...new Set(s.register.map(h=>h.country).filter(Boolean))]
+    .sort((a,b)=>s.register.filter(h=>h.country===b).length - s.register.filter(h=>h.country===a).length);
+  const datasets = countries.map(c=>({
+    label:c,
+    data: comps.map(comp=>s.register.filter(h=>h.comp===comp && h.country===c).length),
+    backgroundColor: COUNTRY_COLORS[c] || PALETTE.inkTertiary,
+    borderWidth: 0, borderRadius: 2, barPercentage: 0.7
+  }));
+  charts.push(new Chart(ctx, {type:'bar', data:{labels:comps.map(shortComp), datasets}, options: chartOptionsHBar()}));
+
+  const legend = document.getElementById('compLegend');
+  legend.innerHTML = '';
+  comps.forEach(comp=>{
+    const count = s.register.filter(h=>h.comp===comp).length;
+    legend.append(el('div',{class:'legend-row'},
+      el('div',{class:'legend-left'},
+        el('span',{class:'legend-swatch', style:{background:compSwatch(comp)}}),
+        el('span',{class:'legend-name'}, COMP_FULL[comp]||comp)),
+      el('div',{class:'legend-right'},
+        el('span',{class:'legend-val'}, String(count)),
+        el('span',{class:'legend-pct'}, count===1?'runner':'runners'))
+    ));
+  });
+}
+function compSwatch(c){
+  if(c==='BIT') return PALETTE.brand;
+  if(c==='BTS') return PALETTE.gold;
+  return PALETTE.ink;
+}
+
+function baseTooltip(){
+  return {
+    backgroundColor: PALETTE.ink,
+    titleFont: {family:'Manrope',weight:'700',size:11},
+    bodyFont: {family:'Manrope',size:12,weight:'500'},
+    padding: 10, boxPadding: 4, cornerRadius: 6,
+    displayColors: true,
+    titleColor: PALETTE.paper, bodyColor: PALETTE.paper
+  };
+}
+function baseGrid(){ return {color:'rgba(26,20,16,0.06)', drawBorder:false, drawTicks:false}; }
+function baseTickFont(){ return {font:{family:'Manrope',size:11,weight:'500'}, color:PALETTE.inkSoft, padding:8}; }
+
+function chartOptionsVolume(){
+  return {
+    responsive:true, maintainAspectRatio:false,
+    scales:{
+      x:{grid:{display:false}, ticks:baseTickFont()},
+      y:{position:'left', beginAtZero:true, grid:baseGrid(), ticks:baseTickFont(),
+        title:{display:true, text:'Horses', font:{family:'Manrope',size:10,weight:'600'}, color:PALETTE.inkTertiary}},
+      y1:{position:'right', beginAtZero:true, grid:{display:false}, ticks:{...baseTickFont(), color:PALETTE.gold},
+        title:{display:true, text:'Wins', font:{family:'Manrope',size:10,weight:'600'}, color:PALETTE.gold}}
+    },
+    plugins:{
+      legend:{display:true, position:'bottom',
+        labels:{font:{family:'Manrope',size:11,weight:'600'}, color:PALETTE.ink, boxWidth:10, boxHeight:10, padding:14, usePointStyle:true, pointStyle:'rectRounded'}},
+      tooltip: baseTooltip()
+    },
+    animation:{duration:900, easing:'easeOutQuart'}
+  };
+}
+function chartOptionsStacked(){
+  return {
+    responsive:true, maintainAspectRatio:false,
+    scales:{
+      x:{stacked:true, grid:{display:false}, ticks:baseTickFont()},
+      y:{stacked:true, beginAtZero:true, grid:baseGrid(), ticks:baseTickFont()}
+    },
+    plugins:{
+      legend:{display:true, position:'bottom',
+        labels:{font:{family:'Manrope',size:11,weight:'600'}, color:PALETTE.ink, boxWidth:10, boxHeight:10, padding:12, usePointStyle:true, pointStyle:'rectRounded'}},
+      tooltip: baseTooltip()
+    },
+    animation:{duration:900, easing:'easeOutQuart'}
+  };
+}
+function chartOptionsDonut(total){
+  return {
+    cutout:'70%',
+    plugins:{
+      legend:{display:false},
+      tooltip:{...baseTooltip(), displayColors:false,
+        callbacks:{label:(c)=>`${c.parsed} ${c.parsed===1?'horse':'horses'} · ${(c.parsed/total*100).toFixed(0)}%`}}
+    },
+    animation:{animateRotate:true, duration:1100, easing:'easeOutQuart'}
+  };
+}
+function chartOptionsHBar(){
+  return {
+    indexAxis:'y',
+    scales:{
+      x:{stacked:true, grid:baseGrid(), ticks:baseTickFont()},
+      y:{stacked:true, grid:{display:false}, ticks:{...baseTickFont(), font:{family:'Manrope',size:12,weight:'600'}, color:PALETTE.ink}}
+    },
+    plugins:{legend:{display:false}, tooltip: baseTooltip()},
+    animation:{duration:900, easing:'easeOutQuart'},
+    maintainAspectRatio:false
+  };
+}
+
+/* =============================================================
+   TRAINER LEADERBOARD (season scope)
+   ============================================================= */
+function trainerLeaderboard(s){
+  const m = {};
+  s.register.forEach(h=>{
+    if(!h.trainer) return;
+    const t = m[h.trainer] || (m[h.trainer] = {name:h.trainer, country:h.country, horses:0, wins:0});
+    t.horses++; t.wins += (h.wins||0);
+    if(h.country) t.country = h.country;
+  });
+  return Object.values(m).sort((a,b)=>b.wins-a.wins||b.horses-a.horses||a.name.localeCompare(b.name));
+}
+
+/* =============================================================
+   GLOBAL SEARCH
+   ============================================================= */
+let SEARCH_INDEX = [];
+function buildSearchIndex(){
+  SEARCH_INDEX = [];
+  const horseMap = {}, trainerMap = {}, raceMap = {};
+  DATA.seasons.forEach(s=>{
+    s.register.forEach(h=>{
+      const k = (h.name||'').toUpperCase().trim();
+      if(k){
+        const e = horseMap[k] || (horseMap[k] = {key:k, name:h.name, origin:h.origin, wins:0, runs:0, seasons:new Set(), trainers:new Set()});
+        e.runs++; e.wins += (h.wins||0); e.seasons.add(s.season);
+        if(h.trainer) e.trainers.add(h.trainer);
+        if(h.origin) e.origin = h.origin;
+      }
+      const tk = (h.trainer||'').trim();
+      if(tk){
+        const e = trainerMap[tk.toUpperCase()] || (trainerMap[tk.toUpperCase()] = {key:tk, name:h.trainer, country:h.country, horses:0, wins:0, seasons:new Set()});
+        e.horses++; e.wins += (h.wins||0); e.seasons.add(s.season);
+        if(h.country) e.country = h.country;
+      }
+    });
+    s.winners.forEach(w=>{
+      const rk = (w.race||'').toUpperCase().trim();
+      if(rk){
+        raceMap[rk] = raceMap[rk] || {key:rk, name:w.race, wins:0};
+        raceMap[rk].wins++;
+      }
+    });
+  });
+  Object.values(horseMap).forEach(h=>SEARCH_INDEX.push({
+    type:'horse', name:h.name, origin:h.origin, key:h.key,
+    haystack:(h.name+' '+(h.origin||'')+' '+[...h.trainers].join(' ')).toLowerCase(),
+    detail:`${h.wins} ${h.wins===1?'win':'wins'} · ${h.seasons.size} ${h.seasons.size===1?'season':'seasons'}`,
+    stat: h.wins>0 ? `${h.wins}W` : `${h.runs}R`
+  }));
+  Object.values(trainerMap).forEach(t=>SEARCH_INDEX.push({
+    type:'trainer', name:t.name, key:t.key, country:t.country,
+    haystack:(t.name+' '+(t.country||'')).toLowerCase(),
+    detail:`${t.horses} horses · ${t.seasons.size} ${t.seasons.size===1?'season':'seasons'}`,
+    stat: t.wins>0 ? `${t.wins}W` : null
+  }));
+  Object.values(raceMap).forEach(r=>SEARCH_INDEX.push({
+    type:'race', name:r.name, key:r.key,
+    haystack:r.name.toLowerCase(),
+    detail:`${r.wins} int'l ${r.wins===1?'win':'wins'} on record`,
+    stat:null
+  }));
+}
+function wireGlobalSearch(){
+  const input = document.getElementById('globalSearch');
+  const results = document.getElementById('searchResults');
+  let activeIdx = -1;
+
+  function paint(q){
+    if(!q || q.length < 2){ results.classList.remove('open'); results.innerHTML=''; return; }
+    const needle = q.toLowerCase();
+    const list = SEARCH_INDEX
+      .filter(r=>r.haystack.includes(needle))
+      .sort((a,b)=>{
+        const aS = a.name.toLowerCase().startsWith(needle);
+        const bS = b.name.toLowerCase().startsWith(needle);
+        if(aS!==bS) return aS?-1:1;
+        const order = {horse:0, trainer:1, race:2};
+        if(order[a.type]!==order[b.type]) return order[a.type]-order[b.type];
+        return a.name.localeCompare(b.name);
+      })
+      .slice(0, 20);
+
+    results.innerHTML = '';
+    if(!list.length){
+      results.append(el('div',{class:'search-empty'}, 'No matches for "'+q+'"'));
+      results.classList.add('open');
+      return;
+    }
+    const groups = {horse:'Horses', trainer:'Trainers', race:'Races'};
+    let lastType = null;
+    list.forEach(r=>{
+      if(r.type !== lastType){
+        results.append(el('div',{class:'search-group'}, groups[r.type]));
+        lastType = r.type;
+      }
+      const row = el('div',{class:'search-result'},
+        el('div',{},
+          el('div',{class:'sr-name', html:`${r.name}${r.origin?` <span class="origin">(${r.origin})</span>`:''}`}),
+          el('div',{class:'sr-meta'}, r.detail || '')),
+        r.stat ? el('div',{class:'sr-stat'}, r.stat) : el('div')
+      );
+      row.addEventListener('click', ()=>{
+        if(r.type==='horse') openHorseModal(r.name);
+        else if(r.type==='trainer') openTrainerModal(r.name);
+        else if(r.type==='race') openRaceModal(r.name);
+        input.value=''; results.classList.remove('open');
+      });
+      results.append(row);
+    });
+    results.classList.add('open');
+    activeIdx = -1;
+  }
+  input.addEventListener('input', e=>paint(e.target.value));
+  input.addEventListener('focus', ()=>{ if(input.value.length>=2) paint(input.value); });
+  document.addEventListener('click', e=>{
+    if(!e.target.closest('#searchWrap')) results.classList.remove('open');
+  });
+  input.addEventListener('keydown', e=>{
+    if(!results.classList.contains('open')) return;
+    const rows = results.querySelectorAll('.search-result');
+    if(e.key==='Escape'){ results.classList.remove('open'); input.blur(); }
+    else if(e.key==='ArrowDown'){ e.preventDefault(); activeIdx = Math.min(rows.length-1, activeIdx+1); upd(rows); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); activeIdx = Math.max(0, activeIdx-1); upd(rows); }
+    else if(e.key==='Enter' && activeIdx>=0){ e.preventDefault(); rows[activeIdx].click(); }
+  });
+  function upd(rows){
+    rows.forEach((r,i)=>r.classList.toggle('active', i===activeIdx));
+    if(rows[activeIdx]) rows[activeIdx].scrollIntoView({block:'nearest'});
+  }
+}
+function wireKeyboardShortcuts(){
+  document.addEventListener('keydown', e=>{
+    if((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==='k'){
+      e.preventDefault();
+      const inp = document.getElementById('globalSearch');
+      if(inp){ inp.focus(); inp.select(); }
+    }
+    if(e.key === '/' && !['INPUT','TEXTAREA'].includes(document.activeElement.tagName)){
+      e.preventDefault();
+      const inp = document.getElementById('globalSearch');
+      if(inp) inp.focus();
+    }
+  });
+}
+
+/* =============================================================
+   MODAL
+   ============================================================= */
+function wireModal(){
+  const overlay = document.getElementById('modalOverlay');
+  const close = document.getElementById('modalClose');
+  function shut(){ overlay.classList.remove('open'); document.body.style.overflow=''; }
+  close.addEventListener('click', shut);
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) shut(); });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape') shut(); });
+}
+function openModal(html){
+  const overlay = document.getElementById('modalOverlay');
+  document.getElementById('modalContent').innerHTML = html;
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  overlay.scrollTop = 0;
+}
+function openHorseModal(name){
+  if(!name) return;
+  const key = name.toUpperCase().trim();
+  const appearances = [], wins = [];
+  DATA.seasons.forEach(s=>{
+    s.register.forEach(h=>{ if((h.name||'').toUpperCase().trim()===key) appearances.push({season:s.season, ...h}); });
+    s.winners.forEach(w=>{ if((w.name||'').toUpperCase().trim()===key) wins.push({season:s.season, ...w}); });
+  });
+  if(!appearances.length) return;
+  const totalWins = appearances.reduce((a,b)=>a+(b.wins||0), 0);
+  const origin = appearances.map(a=>a.origin).find(Boolean) || '';
+  const trainers = [...new Set(appearances.map(a=>a.trainer).filter(Boolean))];
+  const seasonsArr = [...new Set(appearances.map(a=>a.season))];
+
+  let html = `
+    <div class="modal-head">
+      <div class="modal-eyebrow">Horse profile</div>
+      <div class="modal-title">${name}${origin?` <span class="origin">(${origin})</span>`:''}</div>
+      <div class="modal-sub">${trainers.map(t=>`<span class="pill">${t}</span>`).join('')}</div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-stats">
+        <div class="ms"><div class="ms-label">Appearances</div><div class="ms-value">${appearances.length}</div></div>
+        <div class="ms"><div class="ms-label">Seasons</div><div class="ms-value">${seasonsArr.length}</div></div>
+        <div class="ms"><div class="ms-label">Wins</div><div class="ms-value win">${totalWins}</div></div>
+        <div class="ms"><div class="ms-label">Strike rate</div><div class="ms-value">${totalWins>0?Math.round(totalWins/appearances.length*100)+'%':'—'}</div></div>
+      </div>`;
+  if(wins.length){
+    html += `<div class="modal-section-label">Wins on record</div>`;
+    wins.sort((a,b)=>(a.date||'').localeCompare(b.date||'')).forEach(w=>{
+      const d = fmtDate(w.date);
+      const dateBlock = typeof d==='object' ? `<span class="day">${d.day}</span>${d.mon} '${d.yr}` : (d||'—');
+      html += `<div class="modal-race">
+        <div class="mr-date">${dateBlock}</div>
+        <div class="mr-info"><div class="race">${w.race||''}</div><div class="sub">${w.season} season · trained by ${w.trainer||'—'}</div></div>
+        <div class="mr-badge">★ #${w.win_no||1}</div>
+      </div>`;
+    });
+  }
+  html += `<div class="modal-section-label">Every appearance</div>`;
+  appearances.forEach(a=>{
+    const compLabel = a.comp ? shortComp(a.comp) : '';
+    html += `<div class="modal-race">
+      <div class="mr-date" style="line-height:1.2">${a.season}</div>
+      <div class="mr-info"><div class="race">${compLabel || '—'}</div><div class="sub">${a.trainer || '—'} · representing ${a.country || '—'}</div></div>
+      <div class="mr-badge" style="background:${a.winner?'var(--gold)':'var(--bg-subtle)'};color:${a.winner?'var(--text)':'var(--text-tertiary)'}">${a.winner?`${a.wins} ${a.wins===1?'win':'wins'}`:'Ran'}</div>
+    </div>`;
+  });
+  html += `</div>`;
+  openModal(html);
+}
+function openTrainerModal(name){
+  if(!name) return;
+  const key = name.toUpperCase().trim();
+  const allHorses = [];
+  DATA.seasons.forEach(s=>{
+    s.register.forEach(h=>{ if((h.trainer||'').toUpperCase().trim()===key) allHorses.push({season:s.season, ...h}); });
+  });
+  if(!allHorses.length) return;
+  const totalWins = allHorses.reduce((a,b)=>a+(b.wins||0), 0);
+  const winners = allHorses.filter(h=>h.winner);
+  const country = allHorses.map(h=>h.country).find(Boolean) || '';
+  const seasons = [...new Set(allHorses.map(h=>h.season))].sort();
+  const horseMap = {};
+  allHorses.forEach(h=>{
+    const k = (h.name||'').toUpperCase();
+    if(!horseMap[k]) horseMap[k] = {name:h.name, origin:h.origin, wins:0, runs:0};
+    horseMap[k].runs++;
+    horseMap[k].wins += (h.wins||0);
+  });
+  const horses = Object.values(horseMap).sort((a,b)=>b.wins-a.wins||a.name.localeCompare(b.name));
+
+  let html = `
+    <div class="modal-head">
+      <div class="modal-eyebrow">Trainer profile</div>
+      <div class="modal-title">${name}</div>
+      <div class="modal-sub"><span class="pill">${country||'—'}</span><span>${seasons.length} ${seasons.length===1?'season':'seasons'} · ${seasons[0]}${seasons.length>1?` — ${seasons[seasons.length-1]}`:''}</span></div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-stats">
+        <div class="ms"><div class="ms-label">Runners</div><div class="ms-value">${allHorses.length}</div></div>
+        <div class="ms"><div class="ms-label">Unique horses</div><div class="ms-value">${horses.length}</div></div>
+        <div class="ms"><div class="ms-label">Wins</div><div class="ms-value win">${totalWins}</div></div>
+        <div class="ms"><div class="ms-label">Winning horses</div><div class="ms-value">${winners.length}</div></div>
+      </div>
+      <div class="modal-section-label">Roster · click any horse</div>
+      <div class="modal-horse-grid">`;
+  horses.forEach(h=>{
+    html += `<div>
+      <div class="h-name" data-horse="${h.name.replace(/"/g,'&quot;')}">${h.name}${h.origin?` <span class="origin">(${h.origin})</span>`:''}</div>
+      <div class="h-wins${h.wins===0?' zero':''}">${h.wins===0?h.runs+'R':h.wins+'W'}</div>
+    </div>`;
+  });
+  html += `</div></div>`;
+  openModal(html);
+  document.querySelectorAll('#modalContent .h-name').forEach(elm=>{
+    elm.addEventListener('click', ()=>openHorseModal(elm.dataset.horse));
+  });
+}
+function openRaceModal(raceName){
+  if(!raceName) return;
+  const key = raceName.toUpperCase().trim();
+  const wins = [];
+  DATA.seasons.forEach(s=>{
+    s.winners.forEach(w=>{ if((w.race||'').toUpperCase().trim()===key) wins.push({season:s.season, ...w}); });
+  });
+  if(!wins.length) return;
+  wins.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  let html = `
+    <div class="modal-head">
+      <div class="modal-eyebrow">Race</div>
+      <div class="modal-title">${raceName}</div>
+      <div class="modal-sub">${wins.length} international ${wins.length===1?'win':'wins'} on record</div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section-label">Roll of honour</div>`;
+  wins.forEach(w=>{
+    const d = fmtDate(w.date);
+    const dateBlock = typeof d==='object' ? `<span class="day">${d.day}</span>${d.mon} '${d.yr}` : (d||'—');
+    html += `<div class="modal-race">
+      <div class="mr-date">${dateBlock}</div>
+      <div class="mr-info"><div class="race clickable" data-horse="${(w.name||'').replace(/"/g,'&quot;')}">${w.name||'—'}${w.origin?` <span style="font-size:11px;color:var(--text-tertiary);font-style:italic">(${w.origin})</span>`:''}</div><div class="sub">${w.season} · ${w.trainer||'—'} · ${w.country||'—'}</div></div>
+      <div class="mr-badge">Winner</div>
+    </div>`;
+  });
+  html += `</div>`;
+  openModal(html);
+  document.querySelectorAll('#modalContent .race.clickable').forEach(elm=>{
+    elm.addEventListener('click', ()=>openHorseModal(elm.dataset.horse));
+  });
+}
+
+/* =============================================================
+   ANIMATED COUNTERS
+   ============================================================= */
+function animateCounters(scope){
+  const targets = (scope||document).querySelectorAll('.kpi-value[data-target]');
+  targets.forEach(elm=>{
+    const target = parseFloat(elm.dataset.target);
+    const suffix = elm.dataset.suffix || '';
+    if(isNaN(target)){ elm.textContent = elm.dataset.target; return; }
+    const dur = 850;
+    const start = performance.now();
+    function tick(now){
+      const t = Math.min(1, (now-start)/dur);
+      const eased = 1 - Math.pow(1-t, 3);
+      const val = Math.round(target * eased);
+      elm.textContent = val + suffix;
+      if(t<1) requestAnimationFrame(tick);
+      else elm.textContent = target + suffix;
+    }
+    requestAnimationFrame(tick);
+  });
+}
+
+/* =============================================================
+   CONFETTI — sparing, only fires once per session per season
+   ============================================================= */
+const confettiFired = new Set();
+function fireConfetti(key){
+  if(confettiFired.has(key)) return;
+  confettiFired.add(key);
+  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const canvas = document.getElementById('confettiCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const colors = ['#C9A961','#E8D9B4','#980B2C','#FAFAF7'];
+  const particles = [];
+  for(let i=0;i<60;i++){
+    particles.push({
+      x: window.innerWidth*(0.25+Math.random()*0.5),
+      y: -20 - Math.random()*120,
+      vx: (Math.random()-0.5)*3.5,
+      vy: 2 + Math.random()*3,
+      r: 3 + Math.random()*3.5,
+      color: colors[Math.floor(Math.random()*colors.length)],
+      rot: Math.random()*Math.PI*2,
+      vr: (Math.random()-0.5)*0.22,
+      shape: Math.random()<0.5?'rect':'circle',
+      life: 1
+    });
+  }
+  const start = performance.now();
+  function draw(now){
+    const elapsed = now - start;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    let alive = false;
+    particles.forEach(p=>{
+      p.vy += 0.08;
+      p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+      p.life = Math.max(0, 1 - elapsed/3000);
+      if(p.y < canvas.height+30 && p.life>0){
+        alive = true;
+        ctx.save();
+        ctx.globalAlpha = p.life;
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = p.color;
+        if(p.shape==='rect') ctx.fillRect(-p.r, -p.r*0.5, p.r*2, p.r);
+        else { ctx.beginPath(); ctx.arc(0,0,p.r,0,Math.PI*2); ctx.fill(); }
+        ctx.restore();
+      }
+    });
+    if(alive) requestAnimationFrame(draw);
+    else ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+  requestAnimationFrame(draw);
+}
+
+/* =============================================================
+   DID YOU KNOW
+   ============================================================= */
+function buildFacts(scope){
+  const facts = [];
+  if(scope==='ALL'){
+    const totals = DATA.totals;
+    const seasons = DATA.seasons;
+    const horseMap = {};
+    seasons.forEach(s=>s.winners.forEach(w=>{
+      const k=(w.name||'').toUpperCase();
+      horseMap[k] = (horseMap[k] || {name:w.name, origin:w.origin, wins:0, trainer:w.trainer});
+      horseMap[k].wins++;
+    }));
+    const topHorse = Object.values(horseMap).sort((a,b)=>b.wins-a.wins)[0];
+    if(topHorse) facts.push(`The all-time leading international horse at BTC is <strong>${topHorse.name}${topHorse.origin?' ('+topHorse.origin+')':''}</strong>, with <strong>${topHorse.wins}</strong> international wins on the board.`);
+    const trainerMap = {};
+    seasons.forEach(s=>s.register.forEach(h=>{
+      if(!h.trainer) return;
+      trainerMap[h.trainer] = (trainerMap[h.trainer] || {name:h.trainer, wins:0});
+      trainerMap[h.trainer].wins += (h.wins||0);
+    }));
+    const topT = Object.values(trainerMap).sort((a,b)=>b.wins-a.wins)[0];
+    if(topT) facts.push(`<strong>${topT.name}</strong> leads the all-time international trainer charts at BTC with <strong>${topT.wins}</strong> wins.`);
+    const busy = [...seasons].sort((a,b)=>b.stats.horses-a.stats.horses)[0];
+    if(busy) facts.push(`The most internationally attended season was <strong>${busy.season}</strong>, with <strong>${busy.stats.horses}</strong> overseas runners.`);
+    const wonMost = [...seasons].sort((a,b)=>b.stats.wins-a.stats.wins)[0];
+    if(wonMost) facts.push(`International raiders enjoyed their biggest haul in <strong>${wonMost.season}</strong>, banking <strong>${wonMost.stats.wins}</strong> wins between them.`);
+    facts.push(`Across <strong>${totals.seasons}</strong> tracked seasons, <strong>${totals.horses}</strong> international horses have run at BTC.`);
+    facts.push(`Runners have arrived from <strong>${totals.countries.length}</strong> different nations: ${totals.countries.join(', ')}.`);
+  } else {
+    const s = DATA.seasons.find(x=>x.season===scope);
+    if(!s) return facts;
+    const st = s.stats;
+    const gb = s.register.filter(h=>h.country==='GB').length;
+    if(gb>0 && st.horses>0) facts.push(`<strong>Great Britain</strong> sent <strong>${gb}</strong> of the <strong>${st.horses}</strong> international runners this season — <strong>${Math.round(gb/st.horses*100)}%</strong> of the entire overseas field.`);
+    if(st.dual_winners>0){
+      const duals = s.register.filter(h=>h.wins>=2);
+      facts.push(`<strong>${duals.length}</strong> ${duals.length===1?'horse':'horses'} won multiple races this season: ${duals.map(d=>`<strong>${d.name}</strong>`).join(' and ')}.`);
+    }
+    const tm = {};
+    s.register.forEach(h=>{
+      if(!h.trainer) return;
+      tm[h.trainer] = (tm[h.trainer] || {name:h.trainer, wins:0, runs:0});
+      tm[h.trainer].wins += (h.wins||0); tm[h.trainer].runs++;
+    });
+    const top = Object.values(tm).sort((a,b)=>b.wins-a.wins||b.runs-a.runs)[0];
+    if(top && top.wins>0) facts.push(`<strong>${top.name}</strong> led the trainers' table this season with <strong>${top.wins}</strong> ${top.wins===1?'win':'wins'} from <strong>${top.runs}</strong> ${top.runs===1?'runner':'runners'}.`);
+    if(st.horses) facts.push(`The <strong>${scope}</strong> international field represented <strong>${st.countries.length}</strong> nation${st.countries.length===1?'':'s'}: <strong>${st.countries.join(', ')}</strong>.`);
+    if(st.wins) facts.push(`A strike rate of <strong>${Math.round(st.individual_winners/st.horses*100)}%</strong> — <strong>${st.individual_winners}</strong> of the <strong>${st.horses}</strong> runners visited the winner's enclosure.`);
+  }
+  return facts.filter(Boolean);
+}
+function mountDidYouKnow(parent, scope){
+  const facts = buildFacts(scope);
+  if(!facts.length) return;
+  let idx = Math.floor(Math.random() * facts.length);
+  const node = el('div',{class:'dyk'});
+  node.append(
+    el('div',{class:'dyk-icon'}, '?'),
+    el('div',{class:'dyk-content'},
+      el('div',{class:'dyk-label'},'Did you know'),
+      el('div',{class:'dyk-text', id:'dykText'})
+    )
+  );
+  const btn = el('button',{class:'dyk-next'}, 'Next →');
+  node.append(btn);
+  parent.append(node);
+  function paint(){
+    const txt = document.getElementById('dykText');
+    if(!txt) return;
+    txt.style.opacity = '0';
+    setTimeout(()=>{ txt.innerHTML = facts[idx]; txt.style.opacity = '1'; }, 180);
+  }
+  paint();
+  btn.addEventListener('click', ()=>{ idx = (idx+1)%facts.length; paint(); });
+  if(window._dykTimer) clearInterval(window._dykTimer);
+  window._dykTimer = setInterval(()=>{ idx = (idx+1)%facts.length; paint(); }, 9000);
+}
+
+/* =============================================================
+   HALL OF FAME
+   ============================================================= */
+function buildHallOfFame(){
+  const out = [];
+  const sList = DATA.seasons;
+  const horseMap = {};
+  sList.forEach(s=>s.winners.forEach(w=>{
+    const k=(w.name||'').toUpperCase(); if(!k) return;
+    horseMap[k] = horseMap[k] || {name:w.name, origin:w.origin, wins:0, trainer:w.trainer, seasons:new Set()};
+    horseMap[k].wins++; horseMap[k].seasons.add(s.season);
+  }));
+  const horseR = Object.values(horseMap).sort((a,b)=>b.wins-a.wins||b.seasons.size-a.seasons.size)[0];
+  if(horseR) out.push({
+    icon:'★', featured:true, label:'All-time leading horse',
+    valueName: horseR.name + (horseR.origin?` <span class="origin">(${horseR.origin})</span>`:''),
+    detail:`<strong>${horseR.wins} wins</strong> across ${horseR.seasons.size} ${horseR.seasons.size===1?'season':'seasons'} · trained by ${horseR.trainer||'—'}`,
+    clickType:'horse', clickKey:horseR.name
+  });
+  const tMap = {};
+  sList.forEach(s=>s.register.forEach(h=>{
+    if(!h.trainer) return;
+    tMap[h.trainer] = tMap[h.trainer]||{name:h.trainer, country:h.country, wins:0, horses:0, seasons:new Set()};
+    tMap[h.trainer].wins += (h.wins||0);
+    tMap[h.trainer].horses++; tMap[h.trainer].seasons.add(s.season);
+    if(h.country) tMap[h.trainer].country = h.country;
+  }));
+  const tR = Object.values(tMap).sort((a,b)=>b.wins-a.wins||b.horses-a.horses)[0];
+  if(tR) out.push({
+    icon:'♦', label:'All-time leading trainer',
+    valueName: tR.name,
+    detail:`<strong>${tR.wins} wins</strong> from ${tR.horses} runners over ${tR.seasons.size} ${tR.seasons.size===1?'season':'seasons'}`,
+    clickType:'trainer', clickKey:tR.name
+  });
+  const big = [...sList].sort((a,b)=>b.stats.horses-a.stats.horses)[0];
+  if(big) out.push({
+    icon:'△', label:'Largest international field',
+    valueName: big.season,
+    detail:`<strong>${big.stats.horses}</strong> overseas runners — a record season for international participation`,
+    clickType:'season', clickKey:big.season
+  });
+  const winS = [...sList].sort((a,b)=>b.stats.wins-a.stats.wins)[0];
+  if(winS) out.push({
+    icon:'♛', label:'Most rewarding season',
+    valueName: winS.season,
+    detail:`<strong>${winS.stats.wins} wins</strong> from international raiders · <strong>${winS.stats.individual_winners}</strong> different ${winS.stats.individual_winners===1?'horse':'horses'}`,
+    clickType:'season', clickKey:winS.season
+  });
+  const div = [...sList].sort((a,b)=>b.stats.countries.length-a.stats.countries.length)[0];
+  if(div) out.push({
+    icon:'◇', label:'Most diverse season',
+    valueName: div.season,
+    detail:`Runners from <strong>${div.stats.countries.length} nations</strong>: ${div.stats.countries.join(', ')}`,
+    clickType:'season', clickKey:div.season
+  });
+  const cc = {};
+  sList.forEach(s=>s.register.forEach(h=>{ if(h.country) cc[h.country] = (cc[h.country]||0)+1; }));
+  const topN = Object.entries(cc).sort((a,b)=>b[1]-a[1])[0];
+  if(topN){
+    out.push({
+      icon:'⚑', label:'Top sending nation',
+      valueName: (COUNTRY_FULL[topN[0]]||topN[0]) + ` <span class="origin">${topN[0]}</span>`,
+      detail:`<strong>${topN[1]} runners</strong> sent across all tracked seasons`,
+      clickType:null
+    });
+  }
+  return out;
+}
+function renderHallOfFame(root){
+  const records = buildHallOfFame();
+  if(!records.length) return;
+  const sec = el('section',{class:'section'});
+  sec.append(sectionHead("The <em>hall of fame</em>","all-time records · click any card"));
+  const grid = el('div',{class:'hof-grid'});
+  records.forEach((r,i)=>{
+    const card = el('div',{class:'hof-card'+(r.featured?' featured':'')});
+    card.style.animationDelay = (i*40)+'ms';
+    card.append(
+      el('div',{class:'hof-icon'}, r.icon),
+      el('div',{class:'hof-label'}, r.label),
+      el('div',{class:'hof-value', html: r.valueName}),
+      el('div',{class:'hof-detail', html: r.detail})
+    );
+    if(r.clickType){
+      card.addEventListener('click', ()=>{
+        if(r.clickType==='horse') openHorseModal(r.clickKey);
+        else if(r.clickType==='trainer') openTrainerModal(r.clickKey);
+        else if(r.clickType==='season'){
+          activeKey = r.clickKey;
+          document.querySelectorAll('.tab').forEach(t=>{
+            t.classList.remove('active');
+            if(t.firstChild && t.firstChild.textContent === r.clickKey) t.classList.add('active');
+          });
+          renderActive();
+          window.scrollTo({top: document.getElementById('seasonTabsWrap').offsetTop-80, behavior:'smooth'});
+        }
+      });
+    } else {
+      card.style.cursor = 'default';
+    }
+    grid.append(card);
+  });
+  sec.append(grid);
+  root.append(sec);
+}
+
+/* =============================================================
+   POST-RENDER INTERACTIVITY (timeline links)
+   ============================================================= */
+function enhanceInteractivity(root){
+  root.querySelectorAll('.win-horse[data-horse]').forEach(elm=>{
+    if(elm.dataset.wired) return;
+    elm.dataset.wired = '1';
+    elm.style.cursor = 'pointer';
+    elm.addEventListener('click', ()=>openHorseModal(elm.dataset.horse));
+  });
+  root.querySelectorAll('.trainer-link[data-trainer]').forEach(elm=>{
+    if(elm.dataset.wired) return;
+    elm.dataset.wired = '1';
+    const n = elm.dataset.trainer;
+    if(n){
+      elm.style.cursor = 'pointer';
+      elm.style.color = 'var(--text-secondary)';
+      elm.addEventListener('mouseenter', ()=>elm.style.color = 'var(--brand)');
+      elm.addEventListener('mouseleave', ()=>elm.style.color = 'var(--text-secondary)');
+      elm.addEventListener('click', ()=>openTrainerModal(n));
+    }
+  });
+}
+
+/* ---------- go ---------- */
+init();
+</script>
+</body>
+</html>
